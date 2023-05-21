@@ -1,5 +1,5 @@
 # Python version for the program to work: 3.9.13 and below.
-# 
+# For the program to work, you need to connect the database that is in the repository.
 #
 #
 #
@@ -46,6 +46,7 @@ class Research_image_Text(ctk.CTkFrame):
         filepath = filedialog.askopenfilename()
         current_dir = os.path.dirname(os.path.abspath(__file__))
         tesseract_path = os.path.join(current_dir, "Tesseract-OCR", "tesseract.exe")
+        print(tesseract_path)
         pytesseract.pytesseract.tesseract_cmd = tesseract_path
         image = Image.open(filepath)
         cnx = mysql.connector.connect(**config)
@@ -67,7 +68,6 @@ class Research_image_Text(ctk.CTkFrame):
             result = cursor.fetchone()
         cnx.commit()
         messagebox.showinfo("Process", "The detection is completed, the percentage of the language detection is also displayed.")
-
 
 class Research_Text():
     def __init__(self, text, lang_c):
@@ -129,7 +129,6 @@ class TextDeterminant(ctk.CTkFrame):
             research_text = Research_Text(text, lang_c)  # Создание экземпляра класса Research_Text
             score = research_text.count  # Получение значения атрибута count
             word_count = research_text.count_word
-            print(score, word_count)
             lang_button = ctk.CTkLabel(self.results_frame, text=(f"{lang_name} = Score {round((score / word_count * 100), 2)}%")) # 
             lang_button.grid(row=i, column=2, ipadx=20, pady=2)
             i += 1
@@ -214,6 +213,98 @@ class learn_Text:
             cursor_insert.close()
             cnx_insert.close()
 
+class Correction_Words:
+    def __init__(self, text, lang_c):
+        try:
+            global corrected_text
+            cnx = mysql.connector.connect(**config)
+            cursor = cnx.cursor()
+            sql = f"SELECT word FROM {lang_c};"
+            cursor.execute(sql)
+            results = cursor.fetchall()
+            corrected_text = self.correct_text(text, results)
+            print(corrected_text)
+        except Exception as e:  # Обработка ошибки
+            print("Error:", str(e))
+
+
+    def correct_word(self, word, word_list):
+        word_letters = [char for char in word if char.isalpha()]   # Разделение слова на буквы
+        for db_word_tuple in word_list:
+            db_word = db_word_tuple[0]  # Извлечение слова из кортежа
+            db_letters = [char for char in db_word] # Разделение слова из базы данных на буквы
+            print(db_letters, word_letters)
+            print(len(db_letters), len(word_letters))
+            if len(db_letters) != len(word_letters):
+                continue
+            matched = True
+            for letter in word_letters:
+                if letter not in db_letters:
+                    matched = False
+                    break
+            if matched:
+                return db_word
+        return word
+
+    def correct_text(self, text, word_list):
+        # Разбиваем текст на слова
+        words = text.split()
+        # Исправляем каждое слово
+        corrected_words = [self.correct_word(word, word_list) or word for word in words]
+        # Собираем исправленный текст
+        corrected_text = " ".join(corrected_words)
+        return corrected_text
+    
+class Text_Correction(ctk.CTkFrame):
+    def __init__(self, master):
+        super().__init__(master, height=1250, corner_radius=0, width=450)
+        lang = "Not selected"
+        self.grid(row=0, column=0, sticky="nsew", padx=(260, 20), pady=10)
+        self.grid_rowconfigure(0, weight=1)
+        self.entry_text = ctk.CTkTextbox(self, width=700, height=250)
+        self.entry_text.grid(row=0, column=1, padx=20)
+        self.correction_text = ctk.CTkLabel(self, width=700, height= 250, wraplength=600)
+        self.correction_text.grid(row=1, column=1, padx=20)
+        self.button = ctk.CTkButton(self, text=(f"Start Correction language = {lang}"), state= "disabled", command=self.start_process)
+        self.button.grid(row=2, column=1, ipadx=200, pady=10, padx=10)
+        if lang != "Not selected":
+            self.button.configure(state = "normal")
+        self.results_frame = ctk.CTkScrollableFrame(self, width=180, height=500)
+        self.results_frame.grid(row=0, column=2, rowspan=2, sticky="nsew", pady=35)
+        self.result_text = ctk.CTkLabel(self.results_frame, text="Languages")
+        self.result_text.grid(row=0, column=2)
+        lang = self.inseart_lng(self.result_text)
+
+    def inseart_lng(self, results_frame):
+        i = 1
+        cnx = mysql.connector.connect(**config)
+        cursor = cnx.cursor()
+        sql = "SELECT lang_full_name, lang_code FROM lang_list;"
+        cursor.execute(sql)
+        result = cursor.fetchone()
+        while result:
+            lang_name = result[0]  # Получение названия языка
+            lang_c = result[1]
+            def button_callback(language=lang_name, lang_code = lang_c):
+                self.update_lang(language, lang_code)  # Обновление переменной lang
+            lang_button = ctk.CTkButton(results_frame, text=result[0], command=button_callback)
+            lang_button.grid(row=i, column=0, ipadx=20, pady=2)
+            i += 1
+            result = cursor.fetchone()
+            
+    def update_lang(self, language, lang_c):
+        global lang_code
+        lang_code = lang_c
+        lang = language  # Обновление переменной lang
+        self.button.configure(text=f"Start Correction language = {lang}")  # Обновление текста кнопки
+        self.button.configure(state="normal")  # Включение кнопки
+        
+    def start_process(self):
+        text = self.entry_text.get("1.0", "end-1c")
+        Correction_Words(text, lang_code)
+        self.correction_text.configure(text = corrected_text)
+        messagebox.showinfo("Process", "Correction completed")
+        
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -232,10 +323,13 @@ class App(ctk.CTk):
         self.button_image_frame = ctk.CTkButton(self.menu_frame, text="Image determinant", command=self.show_image_frame)
         self.button_image_frame.grid(row=2, column=0, padx=10, pady=(10, 10))  # Добавлено pady=(0, 10) для отступа снизу
         self.button_training_frame = ctk.CTkButton(self.menu_frame, text="Training", command=self.show_traing_frame)
-        self.button_training_frame.grid(row=3, column=0, padx=10, pady=(10, 10))
+        self.button_training_frame.grid(row=5, column=0, padx=10, pady=(10, 10))
+        self.button_text_correction_frame = ctk.CTkButton(self.menu_frame, text="Text correction", command=self.show_text_correction_frame)
+        self.button_text_correction_frame.grid(row=3, column=0, padx=10, pady=(10, 10))
         self.text_frame = None
         self.training_frame = None
         self.image_frame = None
+        self.text_correction_frame = None
     def show_text_frame(self):
         if self.text_frame is not None:
             self.text_frame.destroy()
@@ -250,7 +344,12 @@ class App(ctk.CTk):
         if self.image_frame is not None:
             self.image_frame.destroy()
         self.image_frame = Research_image_Text(self)
-
+    
+    def show_text_correction_frame(self):
+        if self.text_correction_frame is not None:
+            self.text_correction_frame.destroy()
+        self.text_correction_frame = Text_Correction(self)
+        
 if __name__ == "__main__":
     app = App()
     app.mainloop()
