@@ -46,7 +46,6 @@ class Research_image_Text(ctk.CTkFrame):
         filepath = filedialog.askopenfilename()
         current_dir = os.path.dirname(os.path.abspath(__file__))
         tesseract_path = os.path.join(current_dir, "Tesseract-OCR", "tesseract.exe")
-        print(tesseract_path)
         pytesseract.pytesseract.tesseract_cmd = tesseract_path
         image = Image.open(filepath)
         cnx = mysql.connector.connect(**config)
@@ -227,22 +226,20 @@ class Correction_Words:
         except Exception as e:  # Обработка ошибки
             print("Error:", str(e))
 
+    def sort_word(self, word):
+        return ''.join(sorted(word))
 
     def correct_word(self, word, word_list):
-        word_letters = [char for char in word if char.isalpha()]   # Разделение слова на буквы
+        word_letters = [char for char in word if char.isalpha()]  # Разделение слова на буквы
+        sorted_word_letters = self.sort_word(word_letters)
         for db_word_tuple in word_list:
+
             db_word = db_word_tuple[0]  # Извлечение слова из кортежа
-            db_letters = [char for char in db_word] # Разделение слова из базы данных на буквы
-            print(db_letters, word_letters)
-            print(len(db_letters), len(word_letters))
+            db_letters = [char for char in db_word]  # Разделение слова из базы данных на буквы
+            sorted_db_letters = self.sort_word(db_letters)
             if len(db_letters) != len(word_letters):
                 continue
-            matched = True
-            for letter in word_letters:
-                if letter not in db_letters:
-                    matched = False
-                    break
-            if matched:
+            if sorted_db_letters == sorted_word_letters:
                 return db_word
         return word
 
@@ -262,16 +259,16 @@ class Text_Correction(ctk.CTkFrame):
         self.grid(row=0, column=0, sticky="nsew", padx=(260, 20), pady=10)
         self.grid_rowconfigure(0, weight=1)
         self.entry_text = ctk.CTkTextbox(self, width=700, height=250)
-        self.entry_text.grid(row=0, column=1, padx=20)
-        self.correction_text = ctk.CTkLabel(self, width=700, height= 250, wraplength=600)
-        self.correction_text.grid(row=1, column=1, padx=20)
+        self.entry_text.grid(row=0, column=1, padx=20, pady = 20)
+        self.correction_text = ctk.CTkTextbox(self, width=700, height=250)
+        self.correction_text.grid(row=1, column=1, padx=20, )
         self.button = ctk.CTkButton(self, text=(f"Start Correction language = {lang}"), state= "disabled", command=self.start_process)
         self.button.grid(row=2, column=1, ipadx=200, pady=10, padx=10)
         if lang != "Not selected":
             self.button.configure(state = "normal")
-        self.results_frame = ctk.CTkScrollableFrame(self, width=180, height=500)
-        self.results_frame.grid(row=0, column=2, rowspan=2, sticky="nsew", pady=35)
-        self.result_text = ctk.CTkLabel(self.results_frame, text="Languages")
+        self.button_frame = ctk.CTkScrollableFrame(self, width=180, height=500)
+        self.button_frame.grid(row=0, column=2, rowspan=2, sticky="nsew", pady=35)
+        self.result_text = ctk.CTkLabel(self.button_frame, text="Languages")
         self.result_text.grid(row=0, column=2)
         lang = self.inseart_lng(self.result_text)
 
@@ -302,7 +299,7 @@ class Text_Correction(ctk.CTkFrame):
     def start_process(self):
         text = self.entry_text.get("1.0", "end-1c")
         Correction_Words(text, lang_code)
-        self.correction_text.configure(text = corrected_text)
+        self.correction_text.insert("1.0", corrected_text)
         messagebox.showinfo("Process", "Correction completed")
         
 class App(ctk.CTk):
