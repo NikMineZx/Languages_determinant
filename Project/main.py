@@ -297,6 +297,7 @@ class Text_Correction(ctk.CTkFrame):
         self.button.configure(state="normal")  # Включение кнопки
         
     def start_process(self):
+        self.correction_text.delete("1.0", "end")
         text = self.entry_text.get("1.0", "end-1c")
         Correction_Words(text, lang_code)
         self.correction_text.insert("1.0", corrected_text)
