@@ -12,12 +12,18 @@ from tkinter import filedialog
 from customtkinter import *
 from tkinter import messagebox
 
+current_dir = os.path.dirname(os.path.abspath(__file__))
+tesseract_path = os.path.join(current_dir, "DigiCertGlobalRootCA.crt.pem")
 config = {
-    'host': 'localhost',
-    'user': 'root',
-    'password': '',
-    'database': 'languages',
+    'user': 'NikMine',
+    'password': 'Misa21122017',
+    'host': 'o4kodev.mysql.database.azure.com',
+    'database': 'Languages',
+    'port': '3306',
+    'ssl_ca': f'{tesseract_path}',
+    'ssl_disabled': False,
 }
+
 
 ctk.set_appearance_mode("black")
 ctk.set_default_color_theme("blue")
@@ -70,8 +76,8 @@ class Research_image_Text(ctk.CTkFrame):
             lang_c = result[1]
 
             # Perform text recognition using Tesseract OCR
+            # text = pytesseract.image_to_string(image, lang_c)
             text = pytesseract.image_to_string(image, lang_c)
-
             # Perform research on the extracted text
             research_text = Research_Text(text, lang_c)
             score = research_text.count
