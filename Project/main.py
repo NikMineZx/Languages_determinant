@@ -6,7 +6,7 @@ import pytesseract
 import mysql.connector
 import re
 import customtkinter as ctk
-
+import os
 from PIL import Image
 from tkinter import filedialog
 from customtkinter import *
@@ -16,8 +16,8 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 tesseract_path = os.path.join(current_dir, "DigiCertGlobalRootCA.crt.pem")
 config = {
     'user': 'NikMine',
-    'password': 'Misa21122017',
-    'host': 'o4kodev.mysql.database.azure.com',
+    'password': '',
+    'host': '',
     'database': 'Languages',
     'port': '3306',
     'ssl_ca': f'{tesseract_path}',
